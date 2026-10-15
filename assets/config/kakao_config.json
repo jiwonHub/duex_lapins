@@ -1,0 +1,8 @@
+{
+  "nativeAppKey": "25a553358c0eec23c3d1d095100f7ced",
+  "javaScriptAppKey": "9d514d504990b75aa7fcdab907839144",
+  "webRedirectUri": "http://127.0.0.1:8080/auth/kakao/callback",
+  "webExchangeEndpoint": "http://127.0.0.1:8787/api/auth/kakao/exchange",
+  "webSessionEndpoint": "http://127.0.0.1:8787/api/auth/session",
+  "webLogoutEndpoint": "http://127.0.0.1:8787/api/auth/logout"
+}

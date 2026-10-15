@@ -1,8 +1,8 @@
-import 'package:duex_lapins/app/app_routes.dart';
-import 'package:duex_lapins/core/di/providers.dart';
-import 'package:duex_lapins/core/theme/app_theme.dart';
-import 'package:duex_lapins/core/theme/app_typography.dart';
-import 'package:duex_lapins/ui/auth/auth_view_model.dart';
+import 'package:deux_lapins/app/app_routes.dart';
+import 'package:deux_lapins/core/di/providers.dart';
+import 'package:deux_lapins/core/theme/app_theme.dart';
+import 'package:deux_lapins/core/theme/app_typography.dart';
+import 'package:deux_lapins/ui/auth/auth_view_model.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

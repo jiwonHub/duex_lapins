@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:duex_lapins/core/config/kakao_config.dart';
-import 'package:duex_lapins/domain/models/auth_user.dart';
-import 'package:duex_lapins/domain/repositories/auth_repository.dart';
+import 'package:deux_lapins/core/config/kakao_config.dart';
+import 'package:deux_lapins/core/network/kakao_http_client.dart';
+import 'package:deux_lapins/domain/models/auth_user.dart';
+import 'package:deux_lapins/domain/repositories/auth_repository.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:kakao_flutter_sdk_auth/kakao_flutter_sdk_auth.dart';
@@ -14,6 +15,7 @@ class KakaoAuthRepositoryImpl implements AuthRepository {
   const KakaoAuthRepositoryImpl(this._config);
 
   final KakaoConfig _config;
+  static final http.Client _webClient = createKakaoHttpClient();
 
   @override
   Future<AuthUser?> restoreSession() async {
@@ -23,7 +25,7 @@ class KakaoAuthRepositoryImpl implements AuthRepository {
       }
 
       try {
-        final response = await http.get(
+        final response = await _webClient.get(
           Uri.parse(_config.webSessionEndpoint),
           headers: const {
             'Accept': 'application/json',
@@ -117,7 +119,7 @@ class KakaoAuthRepositoryImpl implements AuthRepository {
     late final http.Response response;
 
     try {
-      response = await http
+      response = await _webClient
           .post(
         exchangeUri,
         headers: const {
@@ -143,9 +145,17 @@ class KakaoAuthRepositoryImpl implements AuthRepository {
     }
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw StateError(
-        '카카오 로그인 처리에 실패했습니다. (${response.statusCode})',
-      );
+      var message = '카카오 로그인 처리에 실패했습니다.';
+      try {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final error = data['error'];
+        if (error is Map && error['message'] is String) {
+          message = error['message'] as String;
+        }
+      } catch (_) {
+        // 오류 응답이 JSON이 아니면 기본 메시지를 사용한다.
+      }
+      throw StateError('$message (${response.statusCode})');
     }
 
     final user = _authUserFromResponse(response.body);
@@ -154,7 +164,16 @@ class KakaoAuthRepositoryImpl implements AuthRepository {
       throw StateError('서버 응답에서 사용자 정보를 확인할 수 없습니다.');
     }
 
-    return user;
+    // 로그인 성공 판정 전에 브라우저에 세션 쿠키가 저장되었는지 확인한다.
+    final sessionUser = await restoreSession();
+    if (sessionUser == null || sessionUser.id != user.id) {
+      throw StateError(
+        '카카오 인증은 완료됐지만 로그인 세션이 유지되지 않습니다. '
+            '브라우저 쿠키, 서버 CORS 및 127.0.0.1 주소를 확인해주세요.',
+      );
+    }
+
+    return sessionUser;
   }
 
   @override
@@ -165,7 +184,7 @@ class KakaoAuthRepositoryImpl implements AuthRepository {
       }
 
       try {
-        await http.post(
+        await _webClient.post(
           Uri.parse(_config.webLogoutEndpoint),
           headers: const {
             'Accept': 'application/json',
@@ -197,7 +216,7 @@ class KakaoAuthRepositoryImpl implements AuthRepository {
       id: user.id.toString(),
       nickname: nickname?.isNotEmpty == true
           ? nickname!
-          : 'DUEX LAPINS MEMBER',
+          : '카카오 닉네임 미제공',
       email: user.kakaoAccount?.email,
       profileImageUrl: profile?.thumbnailImageUrl?.toString(),
     );
@@ -231,7 +250,7 @@ class KakaoAuthRepositoryImpl implements AuthRepository {
 
     return AuthUser(
       id: id.toString(),
-      nickname: nickname ?? 'DUEX LAPINS MEMBER',
+      nickname: nickname ?? '카카오 닉네임 미제공',
       email: _firstNonEmptyString([
         user['email'],
         user['accountEmail'],

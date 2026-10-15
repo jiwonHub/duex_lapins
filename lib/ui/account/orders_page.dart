@@ -1,9 +1,10 @@
-import 'package:duex_lapins/app/app_routes.dart';
-import 'package:duex_lapins/core/theme/app_theme.dart';
-import 'package:duex_lapins/core/theme/app_typography.dart';
-import 'package:duex_lapins/core/utils/price_formatter.dart';
-import 'package:duex_lapins/core/widgets/app_image.dart';
-import 'package:duex_lapins/ui/account/account_view_model.dart';
+import 'package:deux_lapins/app/app_routes.dart';
+import 'package:deux_lapins/core/theme/app_theme.dart';
+import 'package:deux_lapins/core/theme/app_typography.dart';
+import 'package:deux_lapins/core/utils/price_formatter.dart';
+import 'package:deux_lapins/core/widgets/app_image.dart';
+import 'package:deux_lapins/ui/account/account_view_model.dart';
+import 'package:deux_lapins/ui/account/account_orders_overview.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -50,8 +51,18 @@ class OrdersPage extends ConsumerWidget {
               padding: EdgeInsets.only(top: 24),
               child: CircularProgressIndicator(strokeWidth: 1.2),
             )
-          else
-            ...state.orders.map(
+          else if (state.errorMessage != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 24),
+              child: Text('주문내역 조회 실패: ${state.errorMessage}'),
+            )
+          else if (state.orders.isEmpty)
+              const Padding(
+                padding: EdgeInsets.only(top: 24),
+                child: Text('아직 주문내역이 없습니다.'),
+              )
+            else
+              ...state.orders.map(
               (order) => InkWell(
                 onTap: () => context.push(AppRoutePath.orderDetail(order.id)),
                 child: Container(
@@ -76,7 +87,7 @@ class OrdersPage extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              order.status,
+                              orderDeliveryLabel(order),
                               style: AppTypography.label(
                                 fontSize: 8.5,
                                 letterSpacing: 1.35,

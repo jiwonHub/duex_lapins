@@ -1,5 +1,5 @@
-import 'package:duex_lapins/core/theme/app_theme.dart';
-import 'package:duex_lapins/core/theme/app_typography.dart';
+import 'package:deux_lapins/core/theme/app_theme.dart';
+import 'package:deux_lapins/core/theme/app_typography.dart';
 import 'package:flutter/material.dart';
 
 class SectionHeading extends StatelessWidget {

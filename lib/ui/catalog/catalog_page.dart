@@ -1,19 +1,28 @@
-import 'package:duex_lapins/core/theme/app_theme.dart';
-import 'package:duex_lapins/core/theme/app_typography.dart';
-import 'package:duex_lapins/core/widgets/web_reveal.dart';
-import 'package:duex_lapins/ui/catalog/catalog_view_model.dart';
-import 'package:duex_lapins/ui/catalog/product_card.dart';
+import 'package:deux_lapins/core/theme/app_theme.dart';
+import 'package:deux_lapins/core/theme/app_typography.dart';
+import 'package:deux_lapins/core/widgets/web_reveal.dart';
+import 'package:deux_lapins/ui/catalog/catalog_view_model.dart';
+import 'package:deux_lapins/ui/catalog/product_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class CatalogPage extends ConsumerWidget {
+class CatalogPage extends ConsumerStatefulWidget {
   const CatalogPage({super.key, required this.title, this.mode = 'ALL'});
 
   final String title;
   final String mode;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CatalogPage> createState() => _CatalogPageState();
+}
+
+class _CatalogPageState extends ConsumerState<CatalogPage> {
+  String _sort = 'recommended';
+
+  @override
+  Widget build(BuildContext context) {
+    final title = widget.title;
+    final mode = widget.mode;
     final state = ref.watch(catalogViewModelProvider);
     final width = MediaQuery.sizeOf(context).width;
     final mobile = width < 720;
@@ -23,6 +32,17 @@ class CatalogPage extends ConsumerWidget {
     if (mode == 'BEST') products = products.where((e) => e.isBest).toList();
     if (mode == 'PREMIUM') {
       products = products.where((e) => e.isPremium).toList();
+    }
+
+    products = [...products];
+
+    switch (_sort) {
+      case 'price_asc':
+        products.sort((a, b) => a.price.compareTo(b.price));
+      case 'price_desc':
+        products.sort((a, b) => b.price.compareTo(a.price));
+      case 'name':
+        products.sort((a, b) => a.name.compareTo(b.name));
     }
 
     return SingleChildScrollView(
@@ -96,13 +116,33 @@ class CatalogPage extends ConsumerWidget {
                 label: const Text('필터'),
               ),
               const SizedBox(width: 12),
-              Text(
-                '정렬  /  추천순',
-                style: AppTypography.label(
-                  fontSize: 9,
-                  letterSpacing: 1.1,
-                  color: AppTheme.muted,
-                ),
+              DropdownButton<String>(
+                value: _sort,
+                underline: const SizedBox.shrink(),
+                style: AppTypography.label(fontSize: 10),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'recommended',
+                    child: Text('추천순'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'price_asc',
+                    child: Text('낮은 가격순'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'price_desc',
+                    child: Text('높은 가격순'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'name',
+                    child: Text('상품명순'),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => _sort = value);
+                  }
+                },
               ),
             ],
           ),
@@ -111,8 +151,12 @@ class CatalogPage extends ConsumerWidget {
           const SizedBox(height: 24),
           if (state.loading)
             const Center(child: CircularProgressIndicator(strokeWidth: 1.2))
-          else
-            GridView.builder(
+          else if (state.errorMessage != null)
+            Text('상품 조회 실패: ${state.errorMessage}')
+          else if (products.isEmpty)
+              const Center(child: Text('조건에 맞는 상품이 없습니다.'))
+            else
+              GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: products.length,
@@ -207,6 +251,24 @@ class CatalogPage extends ConsumerWidget {
                     ref
                         .read(catalogViewModelProvider.notifier)
                         .selectCategory(category);
+                    Navigator.pop(context);
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 20),
+            Text('라인', style: AppTypography.label(fontSize: 9, letterSpacing: 1.55)),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: ['ALL', 'CLASSIC', 'WORK'].map((line) {
+                final selected = ref.read(catalogViewModelProvider).line == line;
+                return ChoiceChip(
+                  label: Text(line),
+                  selected: selected,
+                  onSelected: (_) {
+                    ref.read(catalogViewModelProvider.notifier).selectLine(line);
                     Navigator.pop(context);
                   },
                 );

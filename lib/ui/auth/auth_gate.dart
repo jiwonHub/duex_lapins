@@ -1,5 +1,5 @@
-import 'package:duex_lapins/ui/auth/login_page.dart';
-import 'package:duex_lapins/ui/auth/auth_view_model.dart';
+import 'package:deux_lapins/ui/auth/login_page.dart';
+import 'package:deux_lapins/ui/auth/auth_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

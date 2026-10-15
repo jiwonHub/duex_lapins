@@ -1,35 +1,58 @@
-import 'package:duex_lapins/app/app_routes.dart';
-import 'package:duex_lapins/core/theme/app_theme.dart';
-import 'package:duex_lapins/core/theme/app_typography.dart';
-import 'package:duex_lapins/core/utils/price_formatter.dart';
-import 'package:duex_lapins/core/widgets/app_image.dart';
-import 'package:duex_lapins/domain/models/order.dart';
-import 'package:duex_lapins/ui/account/account_view_model.dart';
+import 'package:deux_lapins/app/app_routes.dart';
+import 'package:deux_lapins/core/di/providers.dart';
+import 'package:deux_lapins/core/theme/app_theme.dart';
+import 'package:deux_lapins/core/theme/app_typography.dart';
+import 'package:deux_lapins/core/utils/price_formatter.dart';
+import 'package:deux_lapins/core/widgets/app_image.dart';
+import 'package:deux_lapins/domain/models/order.dart';
+import 'package:deux_lapins/ui/account/account_view_model.dart';
+import 'package:deux_lapins/ui/account/order_claim_section.dart';
+import 'package:deux_lapins/ui/auth/auth_view_model.dart';
+import 'package:deux_lapins/ui/account/account_orders_overview.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class OrderDetailPage extends ConsumerWidget {
+class OrderDetailPage extends ConsumerStatefulWidget {
   const OrderDetailPage({super.key, required this.orderId});
 
   final String? orderId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final orders = ref.watch(accountViewModelProvider).orders;
+  ConsumerState<OrderDetailPage> createState() => _OrderDetailPageState();
+}
+
+class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
+  @override
+  void initState() {
+    super.initState();
+    // 상세 화면에 다시 들어왔을 때 관리자 운송장 등록 내역을 새로 받는다.
+    Future<void>.microtask(() {
+      if (mounted) ref.read(accountViewModelProvider.notifier).refresh();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final orderId = widget.orderId;
+    final account = ref.watch(accountViewModelProvider);
     Order? order;
 
-    for (final item in orders) {
+    for (final item in account.orders) {
       if (item.id == orderId) {
         order = item;
+        break;
       }
     }
 
-    order ??= orders.isEmpty ? null : orders.first;
-
     if (order == null) {
-      return const Center(
-        child: CircularProgressIndicator(strokeWidth: 1.2),
+      if (account.loading) {
+        return const Center(
+          child: CircularProgressIndicator(strokeWidth: 1.2),
+        );
+      }
+      return Center(
+        child: Text(account.errorMessage ?? '해당 주문을 찾을 수 없습니다.'),
       );
     }
 
@@ -78,7 +101,7 @@ class OrderDetailPage extends ConsumerWidget {
             ),
             const SizedBox(height: 9),
             Text(
-              '${order.date}  ·  ${order.status}',
+              '${order.date}  ·  ${orderDeliveryLabel(order)}',
               style: const TextStyle(
                 fontSize: 11,
                 color: AppTheme.muted,
@@ -87,50 +110,69 @@ class OrderDetailPage extends ConsumerWidget {
             const SizedBox(height: 28),
             const Divider(height: 1),
             const SizedBox(height: 20),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  width: 120,
-                  child: AppImage(
-                    url: order.imageUrl,
-                    aspectRatio: 0.78,
-                  ),
+            for (final item in order.items)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 18),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: mobile ? 86 : 110,
+                      child: AppImage(
+                        url: item.imageUrl.isEmpty
+                            ? order.imageUrl
+                            : item.imageUrl,
+                        aspectRatio: 0.78,
+                      ),
+                    ),
+                    const SizedBox(width: 18),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.productName,
+                            style: AppTypography.serif(
+                              fontSize: mobile ? 19 : 24,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '${item.color} / ${item.size} · ${item.quantity}개',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.muted,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            formatPrice(item.total),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            '택배사: ${item.carrier.isEmpty ? "미등록" : item.carrier}',
+                          ),
+                          Text(
+                            '운송장번호: ${item.trackingNumber.isEmpty ? "미등록" : item.trackingNumber}',
+                          ),
+                          if (item.trackingNumber.isNotEmpty)
+                            _ItemTrackingStatus(
+                              orderId: order.id,
+                              item: item,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 18),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        order.itemName.toUpperCase(),
-                        style: AppTypography.serif(
-                          fontSize: 24,
-                          height: 1,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '상품 ${order.itemCount}개',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppTheme.muted,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        formatPrice(order.total),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              ),
+            const Divider(height: 48),
+            OrderClaimSection(order: order),
             const Divider(height: 48),
             Text(
               '배송 정보',
@@ -141,11 +183,11 @@ class OrderDetailPage extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
-            const Text('최지원 · 010-0000-0000'),
+            Text('${order.recipientName} · ${order.recipientPhone}'),
             const SizedBox(height: 6),
-            const Text(
-              '서울특별시 성동구 성수이로 00, 000동 000호',
-              style: TextStyle(color: AppTheme.muted),
+            Text(
+              '(${order.postcode}) ${order.address} ${order.detailAddress}'.trim(),
+              style: const TextStyle(color: AppTheme.muted),
             ),
             const Divider(height: 48),
             Text(
@@ -157,15 +199,103 @@ class OrderDetailPage extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
-            const Text('신용/체크카드'),
-            const SizedBox(height: 6),
             Text(
-              formatPrice(order.total),
+              switch (order.paymentMethod) {
+                'card' => '신용/체크카드',
+                'kakao_pay' => '카카오페이',
+                'naver_pay' => '네이버페이',
+                'bank_transfer' => '계좌이체',
+                _ => '결제수단 확인',
+              },
+            ),
+            const SizedBox(height: 8),
+            Text('상품 금액 · ${formatPrice(order.productAmount)}'),
+            const SizedBox(height: 6),
+            Text('배송비 · ${formatPrice(order.shippingFee)}'),
+            const SizedBox(height: 10),
+            Text(
+              '총 결제금액 · ${formatPrice(order.total)}',
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ItemTrackingStatus extends ConsumerStatefulWidget {
+  const _ItemTrackingStatus({
+    required this.orderId,
+    required this.item,
+  });
+
+  final String orderId;
+  final OrderItem item;
+
+  @override
+  ConsumerState<_ItemTrackingStatus> createState() =>
+      _ItemTrackingStatusState();
+}
+
+class _ItemTrackingStatusState
+    extends ConsumerState<_ItemTrackingStatus> {
+  Future<Map<String, dynamic>>? _request;
+
+  void _load() {
+    final userId = ref.read(authViewModelProvider).user?.id;
+    if (userId == null) return;
+
+    setState(() {
+      _request = ref.read(orderRepositoryProvider).getItemTracking(
+        userId,
+        widget.orderId,
+        widget.item.orderItemId,
+      );
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    Future<void>.microtask(() {
+      if (mounted) _load();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: FutureBuilder<Map<String, dynamic>>(
+            future: _request,
+            builder: (context, snapshot) {
+              if (_request == null ||
+                  snapshot.connectionState == ConnectionState.waiting) {
+                return const Text('배송상태 조회 중');
+              }
+
+              if (snapshot.hasError) {
+                return Text(
+                  '배송조회 실패: ${snapshot.error}',
+                );
+              }
+
+              final result = snapshot.data;
+              final label =
+                  result?['label']?.toString() ?? '확인 불가';
+
+              return Text('배송상태: $label');
+            },
+          ),
+        ),
+        TextButton(
+          onPressed: _load,
+          child: const Text('다시 조회'),
+        ),
+      ],
     );
   }
 }

@@ -1,4 +1,4 @@
-# duex_lapins
+# deux_lapins
 
 A new Flutter project.
 

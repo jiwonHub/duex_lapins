@@ -1,22 +1,21 @@
-import 'package:duex_lapins/core/theme/app_theme.dart';
-import 'package:duex_lapins/core/theme/app_typography.dart';
+import 'package:deux_lapins/core/theme/app_theme.dart';
+import 'package:deux_lapins/core/theme/app_typography.dart';
+import 'package:deux_lapins/ui/account/notification_settings_view_model.dart';
+import 'package:deux_lapins/ui/account/account_view_model.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
 
-class SettingsPage extends StatefulWidget {
+class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
 
   @override
-  State<SettingsPage> createState() => _SettingsPageState();
-}
-
-class _SettingsPageState extends State<SettingsPage> {
-  bool orderUpdates = true;
-  bool newArrivals = true;
-  bool promotions = false;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final mobile = MediaQuery.sizeOf(context).width < 720;
+    final account = ref.watch(accountViewModelProvider);
+    final settings = ref.watch(notificationSettingsViewModelProvider);
+    final viewModel = ref.read(notificationSettingsViewModelProvider.notifier);
+    final disabled = account.loading || account.memberId == null ||
+        settings.loading || settings.saving || settings.error != null;
 
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
@@ -59,23 +58,35 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             const SizedBox(height: 10),
+            if (settings.loading || settings.saving)
+              const LinearProgressIndicator(minHeight: 2),
+            if (settings.error != null)
+              Row(children: [
+                Expanded(child: Text('설정 저장/조회 실패: ${settings.error}',
+                    style: const TextStyle(color: Colors.red))),
+                TextButton(onPressed: account.memberId == null ? null :
+                    () => viewModel.load(account.memberId!), child: const Text('재시도')),
+              ]),
             _tile(
               '주문 상태 알림',
               '배송 준비부터 완료까지 상태를 알려드립니다',
-              orderUpdates,
-              (v) => setState(() => orderUpdates = v),
+              settings.preferences.orderUpdates,
+              disabled ? null : (v) => viewModel.update(
+                  settings.preferences.copyWith(orderUpdates: v)),
             ),
             _tile(
               '신상품 알림',
               '새 컬렉션과 신상품 출시 소식을 알려드립니다',
-              newArrivals,
-              (v) => setState(() => newArrivals = v),
+              settings.preferences.newArrivals,
+              disabled ? null : (v) => viewModel.update(
+                  settings.preferences.copyWith(newArrivals: v)),
             ),
             _tile(
               '혜택 알림',
               '세일 및 회원 전용 혜택을 알려드립니다',
-              promotions,
-              (v) => setState(() => promotions = v),
+              settings.preferences.promotions,
+              disabled ? null : (v) => viewModel.update(
+                  settings.preferences.copyWith(promotions: v)),
             ),
             const Divider(height: 42),
             Text(
@@ -116,7 +127,7 @@ class _SettingsPageState extends State<SettingsPage> {
     String title,
     String subtitle,
     bool value,
-    ValueChanged<bool> onChanged,
+      ValueChanged<bool>? onChanged,
   ) {
     return SwitchListTile(
       contentPadding: EdgeInsets.zero,

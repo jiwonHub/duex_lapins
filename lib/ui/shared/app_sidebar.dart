@@ -1,7 +1,7 @@
-import 'package:duex_lapins/app/app_routes.dart';
-import 'package:duex_lapins/core/theme/app_theme.dart';
-import 'package:duex_lapins/core/theme/app_typography.dart';
-import 'package:duex_lapins/ui/catalog/catalog_view_model.dart';
+import 'package:deux_lapins/app/app_routes.dart';
+import 'package:deux_lapins/core/theme/app_theme.dart';
+import 'package:deux_lapins/core/theme/app_typography.dart';
+import 'package:deux_lapins/ui/catalog/catalog_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -28,21 +28,39 @@ class AppSidebar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final catalog = ref.watch(catalogViewModelProvider);
-    void open(AppSection section, {String category = 'ALL'}) {
-      ref.read(catalogViewModelProvider.notifier).selectCategory(category);
+    void open(
+        AppSection section, {
+          String category = 'ALL',
+          bool closeAfterOpen = true,
+        }) {
+      final viewModel = ref.read(catalogViewModelProvider.notifier);
+
+      viewModel.search('');
+      viewModel.selectLine('ALL');
+      viewModel.selectCategory(category);
+
       context.go(AppRoutePath.forSection(section));
-      closeDrawer?.call();
+      viewModel.refresh();
+
+      if (closeAfterOpen) {
+        closeDrawer?.call();
+      }
     }
 
     Widget menu(
         String text,
         AppSection section, {
           String category = 'ALL',
+          bool keepDrawerOpen = false,
         }) {
       return _SidebarMenuItem(
         text: text,
         selected: currentSection == section,
-        onTap: () => open(section, category: category),
+        onTap: () => open(
+          section,
+          category: category,
+          closeAfterOpen: !keepDrawerOpen,
+        ),
       );
     }
 
@@ -84,7 +102,7 @@ class AppSidebar extends ConsumerWidget {
                 width: double.infinity,
                 height: 96,
                 child: Image.asset(
-                  'assets/images/duex_lapins_logo2.png',
+                  'assets/images/deux_lapins_logo2.png',
                   fit: BoxFit.contain,
                   alignment: Alignment.center,
                 ),
@@ -104,11 +122,20 @@ class AppSidebar extends ConsumerWidget {
             const SizedBox(height: 21),
             _groupLabel('SHOP'),
             const SizedBox(height: 7),
+            menu('ALL', AppSection.allItems),
             menu('NEW', AppSection.newItems),
-            menu('BEST', AppSection.best),
+            menu(
+              'BEST',
+              AppSection.best,
+              keepDrawerOpen: true,
+            ),
             if (currentSection == AppSection.best)
               categoryMenu(AppSection.best),
-            menu('PREMIUM', AppSection.premium),
+            menu(
+              'PREMIUM',
+              AppSection.premium,
+              keepDrawerOpen: true,
+            ),
             if (currentSection == AppSection.premium)
               categoryMenu(AppSection.premium),
             const SizedBox(height: 23),

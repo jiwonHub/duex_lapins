@@ -1,24 +1,26 @@
-import 'package:duex_lapins/app/app_routes.dart';
-import 'package:duex_lapins/app/app_shell.dart';
-import 'package:duex_lapins/ui/account/account_page.dart';
-import 'package:duex_lapins/ui/account/addresses_page.dart';
-import 'package:duex_lapins/ui/account/order_detail_page.dart';
-import 'package:duex_lapins/ui/account/orders_page.dart';
-import 'package:duex_lapins/ui/account/profile_page.dart';
-import 'package:duex_lapins/ui/account/settings_page.dart';
-import 'package:duex_lapins/ui/auth/kakao_callback_page.dart';
-import 'package:duex_lapins/ui/auth/login_page.dart';
-import 'package:duex_lapins/ui/auth/auth_gate.dart';
-import 'package:duex_lapins/ui/cart/cart_page.dart';
-import 'package:duex_lapins/ui/catalog/brands_page.dart';
-import 'package:duex_lapins/ui/catalog/catalog_page.dart';
-import 'package:duex_lapins/ui/catalog/home_page.dart';
-import 'package:duex_lapins/ui/catalog/journal_page.dart';
-import 'package:duex_lapins/ui/catalog/product_detail_page.dart';
-import 'package:duex_lapins/ui/catalog/search_page.dart';
-import 'package:duex_lapins/ui/checkout/checkout_page.dart';
-import 'package:duex_lapins/ui/checkout/order_complete_page.dart';
-import 'package:duex_lapins/ui/wishlist/wishlist_page.dart';
+import 'package:deux_lapins/app/app_routes.dart';
+import 'package:deux_lapins/app/app_shell.dart';
+import 'package:deux_lapins/ui/account/account_page.dart';
+import 'package:deux_lapins/ui/account/addresses_page.dart';
+import 'package:deux_lapins/ui/account/order_detail_page.dart';
+import 'package:deux_lapins/ui/account/orders_page.dart';
+import 'package:deux_lapins/ui/account/profile_page.dart';
+import 'package:deux_lapins/ui/account/settings_page.dart';
+import 'package:deux_lapins/ui/inquiries/inquiries_page.dart';
+import 'package:deux_lapins/ui/auth/kakao_callback_page.dart';
+import 'package:deux_lapins/ui/auth/login_page.dart';
+import 'package:deux_lapins/ui/auth/auth_gate.dart';
+import 'package:deux_lapins/ui/cart/cart_page.dart';
+import 'package:deux_lapins/ui/catalog/brands_page.dart';
+import 'package:deux_lapins/ui/catalog/catalog_page.dart';
+import 'package:deux_lapins/ui/catalog/home_page.dart';
+import 'package:deux_lapins/ui/catalog/journal_page.dart';
+import 'package:deux_lapins/ui/catalog/journal_detail_page.dart';
+import 'package:deux_lapins/ui/catalog/product_detail_page.dart';
+import 'package:deux_lapins/ui/catalog/search_page.dart';
+import 'package:deux_lapins/ui/checkout/checkout_page.dart';
+import 'package:deux_lapins/ui/checkout/order_complete_page.dart';
+import 'package:deux_lapins/ui/wishlist/wishlist_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -48,6 +50,16 @@ final GoRouter appRouter = GoRouter(
           pageBuilder: (context, state) => _page(
             state,
             const HomePage(),
+          ),
+        ),
+        GoRoute(
+          path: AppRoutePath.allItems,
+          pageBuilder: (context, state) => _page(
+            state,
+            const CatalogPage(
+              title: 'ALL PRODUCTS',
+              mode: 'ALL',
+            ),
           ),
         ),
         GoRoute(
@@ -92,6 +104,15 @@ final GoRouter appRouter = GoRouter(
           pageBuilder: (context, state) => _page(
             state,
             const JournalPage(),
+          ),
+        ),
+        GoRoute(
+          path: '/journal/:journalId',
+          pageBuilder: (context, state) => _page(
+            state,
+            JournalDetailPage(
+              journalId: state.pathParameters['journalId']!,
+            ),
           ),
         ),
         GoRoute(
@@ -147,16 +168,7 @@ final GoRouter appRouter = GoRouter(
         ),
         GoRoute(
           path: AppRoutePath.join,
-          pageBuilder: (context, state) => _page(
-            state,
-            const LoginPage(
-              eyebrow: 'MEMBERSHIP  /  DUEX LAPINS',
-              title: 'Join Duex Lapins',
-              description:
-              '카카오 계정으로 간편하게 회원가입하고 주문 내역, 위시리스트와 회원 정보를 관리해보세요.',
-              actionLabel: '카카오로 회원가입',
-            ),
-          ),
+          redirect: (context, state) => AppRoutePath.login,
         ),
         GoRoute(
           path: AppRoutePath.login,
@@ -200,6 +212,17 @@ final GoRouter appRouter = GoRouter(
             state,
             const AuthGate(
               child: ProfilePage(),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: AppRoutePath.inquiries,
+          pageBuilder: (context, state) => _page(
+            state,
+            AuthGate(
+              child: InquiriesPage(
+                productId: state.uri.queryParameters['product_id'],
+              ),
             ),
           ),
         ),

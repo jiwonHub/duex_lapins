@@ -1,9 +1,9 @@
-import 'package:duex_lapins/core/responsive/app_breakpoints.dart';
-import 'package:duex_lapins/core/theme/app_theme.dart';
-import 'package:duex_lapins/core/theme/app_typography.dart';
-import 'package:duex_lapins/core/widgets/web_media_reveal.dart';
-import 'package:duex_lapins/core/widgets/web_parallax_media.dart';
-import 'package:duex_lapins/core/widgets/web_reveal.dart';
+import 'package:deux_lapins/core/responsive/app_breakpoints.dart';
+import 'package:deux_lapins/core/theme/app_theme.dart';
+import 'package:deux_lapins/core/theme/app_typography.dart';
+import 'package:deux_lapins/core/widgets/web_media_reveal.dart';
+import 'package:deux_lapins/core/widgets/web_parallax_media.dart';
+import 'package:deux_lapins/core/widgets/web_reveal.dart';
 import 'package:flutter/material.dart';
 
 class WebSplitEditorial extends StatelessWidget {

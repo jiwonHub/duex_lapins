@@ -1,37 +1,55 @@
-import 'package:duex_lapins/core/responsive/app_breakpoints.dart';
-import 'package:duex_lapins/core/theme/app_theme.dart';
-import 'package:duex_lapins/core/theme/app_typography.dart';
-import 'package:duex_lapins/core/widgets/web_media_reveal.dart';
-import 'package:duex_lapins/core/widgets/web_parallax_media.dart';
-import 'package:duex_lapins/core/widgets/web_reveal.dart';
+import 'package:deux_lapins/app/app_routes.dart';
+import 'package:deux_lapins/core/responsive/app_breakpoints.dart';
+import 'package:deux_lapins/ui/catalog/editorial_view_model.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:deux_lapins/core/theme/app_theme.dart';
+import 'package:deux_lapins/core/theme/app_typography.dart';
+import 'package:deux_lapins/core/widgets/web_media_reveal.dart';
+import 'package:deux_lapins/core/widgets/web_parallax_media.dart';
+import 'package:deux_lapins/core/widgets/web_reveal.dart';
 import 'package:flutter/material.dart';
 
-class JournalPage extends StatelessWidget {
+class JournalPage extends ConsumerWidget {
   const JournalPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final width = MediaQuery.sizeOf(context).width;
     final mobile = width < AppBreakpoints.mobile;
     final desktop = width >= AppBreakpoints.desktop;
 
-    final entries = [
-      (
-        'Volume and Restraint',
-        '새 시즌의 인상을 만드는 비율과 실루엣에 대한 이야기.',
+    final result = ref.watch(publicJournalsProvider);
+
+    if (result.isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(strokeWidth: 1.2),
+      );
+    }
+
+    if (result.hasError) {
+      return Center(
+        child: TextButton(
+          onPressed: () => ref.invalidate(publicJournalsProvider),
+          child: Text('저널 조회 실패 · 다시 시도: ${result.error}'),
+        ),
+      );
+    }
+
+    final journals = result.asData!.value;
+
+    if (journals.isEmpty) {
+      return const Center(
+        child: Text('게시된 저널이 없습니다.'),
+      );
+    }
+
+    final entries = journals.map((journal) => (
+    journal.title,
+    journal.preview,
+    journal.coverImageDataUrl ??
         'https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=1400&q=90',
-      ),
-      (
-        'Objects for Daily Life',
-        '시간이 지날수록 자연스럽게 깊어지는 가죽과 코튼, 그리고 형태.',
-        'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=1400&q=90',
-      ),
-      (
-        'Autumn in Layers',
-        '절제된 색과 서로 다른 질감을 겹쳐 완성한 가을의 레이어링.',
-        'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1400&q=90',
-      ),
-    ];
+    )).toList(growable: false);
 
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
@@ -69,7 +87,11 @@ class JournalPage extends StatelessWidget {
           ),
           SizedBox(height: desktop ? 44 : 28),
           WebMediaReveal(
-            child: Row(
+              child: InkWell(
+                onTap: () => context.go(
+                  AppRoutePath.journalDetail(journals.first.id),
+                ),
+                child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Expanded(
@@ -130,7 +152,8 @@ class JournalPage extends StatelessWidget {
                   ),
                 ],
               ],
-            ),
+                ),
+              ),
           ),
           if (!desktop) ...[
             const SizedBox(height: 18),
@@ -167,8 +190,12 @@ class JournalPage extends StatelessWidget {
             itemBuilder: (_, index) {
               final entry = entries[index + 1];
 
-              return WebReveal(
-                delay: Duration(milliseconds: index * 80),
+              return InkWell(
+                  onTap: () => context.go(
+                    AppRoutePath.journalDetail(journals[index + 1].id),
+                  ),
+                  child: WebReveal(
+                    delay: Duration(milliseconds: index * 80),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -202,6 +229,7 @@ class JournalPage extends StatelessWidget {
                     ),
                   ],
                 ),
+                  ),
               );
             },
           ),

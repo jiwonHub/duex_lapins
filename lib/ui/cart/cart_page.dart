@@ -1,10 +1,12 @@
-import 'package:duex_lapins/app/app_routes.dart';
-import 'package:duex_lapins/core/theme/app_theme.dart';
-import 'package:duex_lapins/core/theme/app_typography.dart';
-import 'package:duex_lapins/core/utils/price_formatter.dart';
-import 'package:duex_lapins/core/utils/product_label_formatter.dart';
-import 'package:duex_lapins/core/widgets/app_image.dart';
-import 'package:duex_lapins/ui/cart/cart_view_model.dart';
+import 'package:deux_lapins/app/app_routes.dart';
+import 'package:deux_lapins/core/theme/app_theme.dart';
+import 'package:deux_lapins/core/theme/app_typography.dart';
+import 'package:deux_lapins/core/utils/price_formatter.dart';
+import 'package:deux_lapins/core/utils/product_label_formatter.dart';
+import 'package:deux_lapins/core/widgets/app_image.dart';
+import 'package:deux_lapins/ui/cart/cart_view_model.dart';
+import 'package:deux_lapins/ui/checkout/checkout_view_model.dart';
+import 'package:deux_lapins/domain/models/cart_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -48,15 +50,25 @@ class CartPage extends ConsumerWidget {
           const SizedBox(height: 28),
           const Divider(height: 1),
           const SizedBox(height: 18),
-          if (cart.items.isEmpty)
+          if (cart.loading) const LinearProgressIndicator(minHeight: 2),
+          if (cart.errorMessage != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(cart.errorMessage!,
+                  style: const TextStyle(color: Colors.red)),
+            ),
+          if (cart.loading)
+            const SizedBox(height: 40)
+          else if (cart.items.isEmpty)
             _empty(context)
           else if (mobile)
             Column(
               children: [
-                ...cart.items.map((item) => _item(ref, item, true)),
+                ...cart.items.map((item) => _item(context, ref, item, true)),
                 const SizedBox(height: 30),
                 _summary(
                   context,
+                  ref,
                   cart.subtotal,
                   cart.shipping,
                   cart.total,
@@ -71,7 +83,7 @@ class CartPage extends ConsumerWidget {
                   flex: 7,
                   child: Column(
                     children: cart.items
-                        .map((item) => _item(ref, item, false))
+                        .map((item) => _item(context, ref, item, false))
                         .toList(),
                   ),
                 ),
@@ -80,6 +92,7 @@ class CartPage extends ConsumerWidget {
                   flex: 4,
                   child: _summary(
                     context,
+                    ref,
                     cart.subtotal,
                     cart.shipping,
                     cart.total,
@@ -124,7 +137,29 @@ class CartPage extends ConsumerWidget {
     );
   }
 
-  Widget _item(WidgetRef ref, dynamic item, bool mobile) {
+  Future<void> _changeItem(
+      BuildContext context,
+      WidgetRef ref,
+      String variantId, [
+        int? quantity,
+      ]) async {
+    try {
+      final notifier = ref.read(cartViewModelProvider.notifier);
+      if (quantity == null) {
+        await notifier.remove(variantId);
+      } else {
+        await notifier.updateQuantity(variantId, quantity);
+      }
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('장바구니 변경 실패: $error')),
+      );
+    }
+  }
+
+  Widget _item(BuildContext context, WidgetRef ref, CartItem item, bool mobile) {
+    final saving = ref.watch(cartViewModelProvider.select((value) => value.saving));
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 18),
       decoration: const BoxDecoration(
@@ -178,12 +213,10 @@ class CartPage extends ConsumerWidget {
                   children: [
                     IconButton(
                       visualDensity: VisualDensity.compact,
-                      onPressed: () => ref
-                          .read(cartViewModelProvider.notifier)
-                          .updateQuantity(
-                            item.product.id,
-                            item.quantity - 1,
-                          ),
+                      onPressed: saving
+                          ? null
+                          : () => _changeItem(
+                          context, ref, item.productVariantId, item.quantity - 1),
                       icon: const Icon(Icons.remove, size: 15),
                     ),
                     Text(
@@ -192,19 +225,17 @@ class CartPage extends ConsumerWidget {
                     ),
                     IconButton(
                       visualDensity: VisualDensity.compact,
-                      onPressed: () => ref
-                          .read(cartViewModelProvider.notifier)
-                          .updateQuantity(
-                            item.product.id,
-                            item.quantity + 1,
-                          ),
+                      onPressed: saving
+                          ? null
+                          : () => _changeItem(
+                          context, ref, item.productVariantId, item.quantity + 1),
                       icon: const Icon(Icons.add, size: 15),
                     ),
                     const Spacer(),
                     TextButton(
-                      onPressed: () => ref
-                          .read(cartViewModelProvider.notifier)
-                          .remove(item.product.id),
+                      onPressed: saving
+                          ? null
+                          : () => _changeItem(context, ref, item.productVariantId),
                       child: const Text('삭제'),
                     ),
                   ],
@@ -225,8 +256,9 @@ class CartPage extends ConsumerWidget {
   }
 
   Widget _summary(
-    BuildContext context,
-    int subtotal,
+      BuildContext context,
+      WidgetRef ref,
+      int subtotal,
     int shipping,
     int total,
   ) {
@@ -263,7 +295,13 @@ class CartPage extends ConsumerWidget {
             width: double.infinity,
             height: 50,
             child: OutlinedButton(
-              onPressed: () => context.go(AppRoutePath.checkout),
+              onPressed: () {
+                ref
+                    .read(checkoutViewModelProvider.notifier)
+                    .startCartPurchase();
+
+                context.go(AppRoutePath.checkout);
+              },
               child: const Text('주문하기  →'),
             ),
           ),

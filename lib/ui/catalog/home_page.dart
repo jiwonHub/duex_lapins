@@ -1,15 +1,17 @@
-import 'package:duex_lapins/app/app_routes.dart';
-import 'package:duex_lapins/core/responsive/app_breakpoints.dart';
-import 'package:duex_lapins/core/theme/app_theme.dart';
-import 'package:duex_lapins/core/theme/app_typography.dart';
-import 'package:duex_lapins/core/widgets/section_heading.dart';
-import 'package:duex_lapins/core/widgets/web_cinematic_hero.dart';
-import 'package:duex_lapins/core/widgets/web_media_reveal.dart';
-import 'package:duex_lapins/core/widgets/web_parallax_media.dart';
-import 'package:duex_lapins/core/widgets/web_reveal.dart';
-import 'package:duex_lapins/core/widgets/web_split_editorial.dart';
-import 'package:duex_lapins/ui/catalog/catalog_view_model.dart';
-import 'package:duex_lapins/ui/catalog/product_card.dart';
+import 'package:deux_lapins/app/app_routes.dart';
+import 'package:deux_lapins/core/responsive/app_breakpoints.dart';
+import 'package:deux_lapins/core/theme/app_theme.dart';
+import 'package:deux_lapins/core/theme/app_typography.dart';
+import 'package:deux_lapins/core/widgets/section_heading.dart';
+import 'package:deux_lapins/core/widgets/web_cinematic_hero.dart';
+import 'package:deux_lapins/core/widgets/web_media_reveal.dart';
+import 'package:deux_lapins/core/widgets/web_parallax_media.dart';
+import 'package:deux_lapins/core/widgets/web_reveal.dart';
+import 'package:deux_lapins/core/widgets/web_split_editorial.dart';
+import 'package:deux_lapins/ui/catalog/catalog_view_model.dart';
+import 'package:deux_lapins/ui/catalog/editorial_view_model.dart';
+import 'package:deux_lapins/ui/catalog/product_card.dart';
+import 'package:deux_lapins/domain/models/product.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,6 +22,7 @@ class HomePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(catalogViewModelProvider);
+    final homeResult = ref.watch(publicHomeContentProvider);
     final width = MediaQuery.sizeOf(context).width;
     final mobile = width < AppBreakpoints.mobile;
     final desktop = width >= AppBreakpoints.desktop;
@@ -32,7 +35,29 @@ class HomePage extends ConsumerWidget {
       );
     }
 
-    final products = state.products;
+    if (homeResult.isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(strokeWidth: 1.2),
+      );
+    }
+
+    if (homeResult.hasError) {
+      return Center(
+        child: TextButton(
+          onPressed: () => ref.invalidate(publicHomeContentProvider),
+          child: Text('홈 콘텐츠 조회 실패 · 다시 시도: ${homeResult.error}'),
+        ),
+      );
+    }
+
+    final home = homeResult.asData?.value;
+    final products = state.products.where((product) => product.isVisible).toList();
+    final bestProducts = products.where((product) => product.isBest).take(4).toList();
+
+    final newProducts = <Product>[
+      for (final id in home?.newArrivalProductIds ?? <String>[])
+        ...products.where((product) => product.id == id),
+    ];
 
     return SingleChildScrollView(
       child: Padding(
@@ -45,15 +70,25 @@ class HomePage extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            WebCinematicHero(
-              imageUrl:
-                  'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=2200&q=92',
-              eyebrow: 'AUTUMN / WINTER 2026  ·  MODERN HERITAGE',
-              title: 'A Quiet Form\nFor What Moves\nYou Forward.',
-              actionLabel: '컬렉션 보기',
-              onTap: () => context.go(AppRoutePath.newItems),
-            ),
-            SizedBox(height: mobile ? 50 : 96),
+            if (home?.hero.visible == true) ...[
+              WebCinematicHero(
+                videoDataUrl: home!.hero.videoDataUrl,
+                imageUrl: home.hero.imageDataUrl ??
+                    'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=2200&q=92',
+                eyebrow: home.hero.subText,
+                title: home.hero.mainText,
+                actionLabel: home.hero.buttonText,
+                onTap: () {
+                  final route = home.hero.buttonRoute;
+                  context.go(
+                    route.startsWith('/') && !route.startsWith('//')
+                        ? route
+                        : AppRoutePath.newItems,
+                  );
+                },
+              ),
+              SizedBox(height: mobile ? 50 : 96),
+            ],
             WebReveal(
               child: SectionHeading(
                 index: '01.',
@@ -68,7 +103,7 @@ class HomePage extends ConsumerWidget {
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: products.take(mobile ? 2 : 4).length,
+              itemCount: newProducts.take(mobile ? 2 : 4).length,
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: mobile ? 1 : 2,
                 crossAxisSpacing: 24,
@@ -80,7 +115,7 @@ class HomePage extends ConsumerWidget {
                   milliseconds: index * 70,
                 ),
                 child: ProductCard(
-                  product: products[index],
+                  product: newProducts[index],
                 ),
               ),
             ),
@@ -95,7 +130,7 @@ class HomePage extends ConsumerWidget {
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: products.length >= 4 ? 4 : products.length,
+              itemCount: bestProducts.length,
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: mobile ? 2 : 4,
                 crossAxisSpacing: mobile ? 10 : 16,
@@ -107,14 +142,15 @@ class HomePage extends ConsumerWidget {
                   milliseconds: index * 55,
                 ),
                 child: ProductCard(
-                  product: products[(index + 4) % products.length],
+                  product: bestProducts[index],
                 ),
               ),
             ),
             SizedBox(height: mobile ? 72 : 142),
-            WebSplitEditorial(
-              imageUrl:
-              'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1800&q=92',
+            if (home?.classicVisible == true)
+              WebSplitEditorial(
+                imageUrl: home!.classicImageDataUrl ??
+                    'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1800&q=92',
               eyebrow: '03.  THE EDIT  /  REFINED UTILITY',
               title: 'Shape first.\nDetail later.',
               body:
@@ -155,10 +191,11 @@ class HomePage extends ConsumerWidget {
               onTap: () => context.go(AppRoutePath.journal),
             ),
             SizedBox(height: mobile ? 74 : 140),
-            WebSplitEditorial(
-              reverse: true,
-              imageUrl:
-                  'https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?auto=format&fit=crop&w=1800&q=92',
+            if (home?.workVisible == true)
+              WebSplitEditorial(
+                reverse: true,
+                imageUrl: home!.workImageDataUrl ??
+                    'https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?auto=format&fit=crop&w=1800&q=92',
               eyebrow: '05.  THE STORY  /  SUBTLE STREET',
               title: 'Made to move.\nBuilt to remain.',
               body:

@@ -1,11 +1,12 @@
-import 'package:duex_lapins/app/app_routes.dart';
-import 'package:duex_lapins/core/responsive/app_breakpoints.dart';
-import 'package:duex_lapins/core/theme/app_theme.dart';
-import 'package:duex_lapins/core/theme/app_typography.dart';
-import 'package:duex_lapins/core/utils/price_formatter.dart';
-import 'package:duex_lapins/core/widgets/app_image.dart';
-import 'package:duex_lapins/domain/models/product.dart';
-import 'package:duex_lapins/ui/wishlist/wishlist_view_model.dart';
+import 'package:deux_lapins/app/app_routes.dart';
+import 'package:deux_lapins/core/responsive/app_breakpoints.dart';
+import 'package:deux_lapins/core/theme/app_theme.dart';
+import 'package:deux_lapins/core/theme/app_typography.dart';
+import 'package:deux_lapins/core/utils/price_formatter.dart';
+import 'package:deux_lapins/core/widgets/app_image.dart';
+import 'package:deux_lapins/domain/models/product.dart';
+import 'package:deux_lapins/ui/auth/auth_view_model.dart';
+import 'package:deux_lapins/ui/wishlist/wishlist_view_model.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,9 +29,10 @@ class _ProductCardState extends ConsumerState<ProductCard> {
 
   @override
   Widget build(BuildContext context) {
-    final wished = ref
-        .watch(wishlistViewModelProvider)
-        .contains(widget.product.id);
+    final wishlistState = ref.watch(wishlistViewModelProvider);
+    final auth = ref.watch(authViewModelProvider);
+    final wished = wishlistState.contains(widget.product.id);
+    final wishlistBusy = wishlistState.loading || wishlistState.saving;
     final mediaQuery = MediaQuery.maybeOf(context);
     final webHover = kIsWeb &&
         mediaQuery != null &&
@@ -84,10 +86,11 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                       ),
                     ),
                   ),
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: IgnorePointer(
+                  if (auth.isLoggedIn)
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: IgnorePointer(
                       ignoring: webHover && !_hovered && !wished,
                       child: AnimatedOpacity(
                         duration: const Duration(milliseconds: 170),
@@ -96,9 +99,25 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                             : 1,
                         child: IconButton(
                           visualDensity: VisualDensity.compact,
-                          onPressed: () => ref
-                              .read(wishlistViewModelProvider.notifier)
-                              .toggle(widget.product.id),
+                          onPressed: wishlistBusy
+                              ? null
+                              : () async {
+                            try {
+                              await ref
+                                  .read(wishlistViewModelProvider.notifier)
+                                  .toggle(widget.product.id);
+                            } catch (error) {
+                              if (!mounted) return;
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    '위시리스트 변경 실패: $error',
+                                  ),
+                                ),
+                              );
+                            }
+                          },
                           icon: Icon(
                             wished
                                 ? Icons.favorite

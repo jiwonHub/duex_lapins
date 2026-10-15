@@ -1,5 +1,6 @@
 enum AppSection {
   home,
+  allItems,
   newItems,
   best,
   premium,
@@ -17,17 +18,22 @@ enum AppSection {
   addresses,
   profile,
   settings,
+  inquiries,
 }
 
 class AppRoutePath {
   const AppRoutePath._();
 
   static const String home = '/';
+  static const String allItems = '/all';
   static const String newItems = '/new';
   static const String best = '/best';
   static const String premium = '/premium';
   static const String brands = '/brands';
   static const String journal = '/journal';
+
+  static String journalDetail(String id) =>
+      '/journal/${Uri.encodeComponent(id)}';
   static const String search = '/search';
   static const String wishlist = '/wishlist';
   static const String cart = '/cart';
@@ -40,6 +46,7 @@ class AppRoutePath {
   static const String addresses = '/account/addresses';
   static const String profile = '/account/profile';
   static const String settings = '/account/settings';
+  static const String inquiries = '/account/inquiries';
   static const String kakaoCallback = '/auth/kakao/callback';
 
   static String product(String productId) => '/product/$productId';
@@ -50,6 +57,8 @@ class AppRoutePath {
     switch (section) {
       case AppSection.home:
         return home;
+      case AppSection.allItems:
+        return allItems;
       case AppSection.newItems:
         return newItems;
       case AppSection.best:
@@ -80,6 +89,8 @@ class AppRoutePath {
         return profile;
       case AppSection.settings:
         return settings;
+      case AppSection.inquiries:
+        return inquiries;
       case AppSection.productDetail:
       case AppSection.orderDetail:
         return home;
@@ -88,6 +99,10 @@ class AppRoutePath {
 
   static AppSection sectionFromUri(Uri uri) {
     final path = uri.path;
+
+    if (path.startsWith('/journal/')) {
+      return AppSection.journal;
+    }
 
     if (path.startsWith('/product/')) {
       return AppSection.productDetail;
@@ -100,6 +115,8 @@ class AppRoutePath {
     switch (path) {
       case home:
         return AppSection.home;
+      case allItems:
+        return AppSection.allItems;
       case newItems:
         return AppSection.newItems;
       case best:
@@ -132,6 +149,8 @@ class AppRoutePath {
         return AppSection.profile;
       case settings:
         return AppSection.settings;
+      case inquiries:
+        return AppSection.inquiries;
       default:
         return AppSection.home;
     }

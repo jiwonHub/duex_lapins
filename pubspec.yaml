@@ -1,4 +1,4 @@
-name: duex_lapins
+name: deux_lapins
 description: Modern fashion commerce UI for Web, iOS, Android and Windows.
 publish_to: "none"
 version: 1.0.0+1
@@ -16,6 +16,9 @@ dependencies:
   kakao_flutter_sdk_auth: 2.0.1
   kakao_flutter_sdk_user: 2.0.1
   http: ^1.6.0
+  flutter_web_plugins:
+    sdk: flutter
+  web: ^1.1.1
 
 dev_dependencies:
   flutter_test:
@@ -28,24 +31,24 @@ flutter:
   uses-material-design: true
   assets:
     - assets/config/kakao_config.json
-    - assets/images/duex_lapins_logo2.png
+    - assets/images/deux_lapins_logo2.png
 
 flutter_launcher_icons:
   android: "ic_launcher"
   ios: true
-  image_path: "assets/images/duex_lapins_logo2.png"
+  image_path: "assets/images/deux_lapins_logo2.png"
   remove_alpha_ios: true
 
   adaptive_icon_background: "#F7F4EE"
-  adaptive_icon_foreground: "assets/images/duex_lapins_logo2.png"
+  adaptive_icon_foreground: "assets/images/deux_lapins_logo2.png"
 
   web:
     generate: true
-    image_path: "assets/images/duex_lapins_logo2.png"
+    image_path: "assets/images/deux_lapins_logo2.png"
     background_color: "#F7F4EE"
     theme_color: "#F7F4EE"
 
   windows:
     generate: true
-    image_path: "assets/images/duex_lapins_logo2.png"
+    image_path: "assets/images/deux_lapins_logo2.png"
     icon_size: 256

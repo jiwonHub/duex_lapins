@@ -1,6 +1,6 @@
-import 'package:duex_lapins/core/responsive/app_breakpoints.dart';
-import 'package:duex_lapins/core/utils/effective_scroll_position.dart';
-import 'package:duex_lapins/core/widgets/app_image.dart';
+import 'package:deux_lapins/core/responsive/app_breakpoints.dart';
+import 'package:deux_lapins/core/utils/effective_scroll_position.dart';
+import 'package:deux_lapins/core/widgets/app_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 

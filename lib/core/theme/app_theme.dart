@@ -1,4 +1,4 @@
-import 'package:duex_lapins/core/theme/app_typography.dart';
+import 'package:deux_lapins/core/theme/app_typography.dart';
 import 'package:flutter/material.dart';
 
 abstract final class AppTheme {

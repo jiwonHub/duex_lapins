@@ -1,8 +1,9 @@
-import 'package:duex_lapins/ui/shared/app_header.dart';
-import 'package:duex_lapins/app/app_routes.dart';
-import 'package:duex_lapins/ui/shared/app_sidebar.dart';
-import 'package:duex_lapins/core/responsive/app_breakpoints.dart';
-import 'package:duex_lapins/core/theme/app_theme.dart';
+import 'package:deux_lapins/ui/shared/app_header.dart';
+import 'package:deux_lapins/app/app_routes.dart';
+import 'package:deux_lapins/ui/shared/app_sidebar.dart';
+import 'package:deux_lapins/core/responsive/app_breakpoints.dart';
+import 'package:deux_lapins/core/theme/app_theme.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -20,7 +21,8 @@ class AppShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final desktop = constraints.maxWidth >= AppBreakpoints.desktop;
+        final desktop =
+            kIsWeb || constraints.maxWidth >= AppBreakpoints.desktop;
 
         if (desktop) {
           return Scaffold(
@@ -74,7 +76,9 @@ class AppShell extends StatelessWidget {
               ),
             ),
           ),
-          bottomNavigationBar: NavigationBar(
+          bottomNavigationBar: kIsWeb
+              ? null
+              : NavigationBar(
             height: 64,
             selectedIndex: _mobileIndex(currentSection),
             onDestinationSelected: (index) {
@@ -144,6 +148,7 @@ class AppShell extends StatelessWidget {
       case AppSection.addresses:
       case AppSection.profile:
       case AppSection.settings:
+      case AppSection.inquiries:
         return 4;
       default:
         return 0;

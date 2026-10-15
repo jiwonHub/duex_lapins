@@ -1,10 +1,11 @@
 import 'dart:math' as math;
 
-import 'package:duex_lapins/core/responsive/app_breakpoints.dart';
-import 'package:duex_lapins/core/theme/app_theme.dart';
-import 'package:duex_lapins/core/theme/app_typography.dart';
-import 'package:duex_lapins/core/utils/effective_scroll_position.dart';
-import 'package:duex_lapins/core/widgets/app_image.dart';
+import 'package:deux_lapins/core/responsive/app_breakpoints.dart';
+import 'package:deux_lapins/core/theme/app_theme.dart';
+import 'package:deux_lapins/core/theme/app_typography.dart';
+import 'package:deux_lapins/core/utils/effective_scroll_position.dart';
+import 'package:deux_lapins/core/widgets/app_image.dart';
+import 'package:deux_lapins/core/widgets/hero_video_background.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -12,6 +13,7 @@ class WebCinematicHero extends StatefulWidget {
   const WebCinematicHero({
     super.key,
     required this.imageUrl,
+    this.videoDataUrl,
     required this.eyebrow,
     required this.title,
     required this.actionLabel,
@@ -19,6 +21,7 @@ class WebCinematicHero extends StatefulWidget {
   });
 
   final String imageUrl;
+  final String? videoDataUrl;
   final String eyebrow;
   final String title;
   final String actionLabel;
@@ -124,6 +127,7 @@ class _WebCinematicHeroState extends State<WebCinematicHero>
     if (!_webMotionEnabled) {
       return _StaticHero(
         imageUrl: widget.imageUrl,
+        videoDataUrl: widget.videoDataUrl,
         eyebrow: widget.eyebrow,
         title: widget.title,
         actionLabel: widget.actionLabel,
@@ -163,8 +167,11 @@ class _WebCinematicHeroState extends State<WebCinematicHero>
                       offset: Offset(0, imageY),
                       child: Transform.scale(
                         scale: imageScale,
-                        child: AppImage(
-                          url: widget.imageUrl,
+                        child: widget.videoDataUrl == null
+                            ? AppImage(url: widget.imageUrl)
+                            : HeroVideoBackground(
+                          url: widget.videoDataUrl!,
+                          fallbackImageUrl: widget.imageUrl,
                         ),
                       ),
                     ),
@@ -338,6 +345,7 @@ class _HeroStamp extends StatelessWidget {
 class _StaticHero extends StatelessWidget {
   const _StaticHero({
     required this.imageUrl,
+    required this.videoDataUrl,
     required this.eyebrow,
     required this.title,
     required this.actionLabel,
@@ -346,6 +354,7 @@ class _StaticHero extends StatelessWidget {
   });
 
   final String imageUrl;
+  final String? videoDataUrl;
   final String eyebrow;
   final String title;
   final String actionLabel;
@@ -357,9 +366,12 @@ class _StaticHero extends StatelessWidget {
     return Stack(
       alignment: Alignment.bottomLeft,
       children: [
-        AppImage(
-          url: imageUrl,
+        AspectRatio(
           aspectRatio: mobile ? 0.80 : 1.62,
+          child: videoDataUrl == null
+              ? AppImage(url: imageUrl)
+              : HeroVideoBackground(
+              url: videoDataUrl!, fallbackImageUrl: imageUrl),
         ),
         Positioned.fill(
           child: ColoredBox(

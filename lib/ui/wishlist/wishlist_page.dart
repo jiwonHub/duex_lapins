@@ -1,9 +1,9 @@
-import 'package:duex_lapins/app/app_routes.dart';
-import 'package:duex_lapins/core/theme/app_theme.dart';
-import 'package:duex_lapins/core/theme/app_typography.dart';
-import 'package:duex_lapins/ui/catalog/catalog_view_model.dart';
-import 'package:duex_lapins/ui/catalog/product_card.dart';
-import 'package:duex_lapins/ui/wishlist/wishlist_view_model.dart';
+import 'package:deux_lapins/app/app_routes.dart';
+import 'package:deux_lapins/core/theme/app_theme.dart';
+import 'package:deux_lapins/core/theme/app_typography.dart';
+import 'package:deux_lapins/ui/catalog/catalog_view_model.dart';
+import 'package:deux_lapins/ui/catalog/product_card.dart';
+import 'package:deux_lapins/ui/wishlist/wishlist_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,7 +15,9 @@ class WishlistPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final catalog = ref.watch(catalogViewModelProvider);
     final ids = ref.watch(wishlistViewModelProvider);
-    final products = catalog.products.where((e) => ids.contains(e.id)).toList();
+    final products = catalog.products
+        .where((e) => e.isVisible && ids.contains(e.id))
+        .toList();
     final mobile = MediaQuery.sizeOf(context).width < 720;
 
     return SingleChildScrollView(
@@ -48,7 +50,23 @@ class WishlistPage extends ConsumerWidget {
           const SizedBox(height: 28),
           const Divider(height: 1),
           const SizedBox(height: 24),
-          if (products.isEmpty)
+          if (ids.loading || catalog.loading)
+            const LinearProgressIndicator(minHeight: 2),
+          if (ids.errorMessage != null || catalog.errorMessage != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                ids.errorMessage ??
+                    catalog.errorMessage ??
+                    '위시리스트를 불러오지 못했습니다.',
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+          if (ids.loading || catalog.loading)
+            const SizedBox(height: 40)
+          else if (ids.errorMessage != null || catalog.errorMessage != null)
+            const SizedBox.shrink()
+          else if (products.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 88),
               child: Center(

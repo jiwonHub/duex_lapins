@@ -1,5 +1,6 @@
-import 'package:duex_lapins/core/di/providers.dart';
-import 'package:duex_lapins/domain/models/auth_user.dart';
+import 'package:deux_lapins/core/di/providers.dart';
+import 'package:deux_lapins/domain/models/auth_user.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class AuthState {
@@ -35,15 +36,23 @@ class AuthState {
 }
 
 class AuthViewModel extends Notifier<AuthState> {
+  int _authVersion = 0;
+
   @override
   AuthState build() {
+    if (kIsWeb && Uri.base.path == '/auth/kakao/callback') {
+      return const AuthState(initializing: false);
+    }
+
     Future<void>.microtask(_restoreSession);
     return const AuthState();
   }
 
   Future<void> _restoreSession() async {
+    final version = ++_authVersion;
     try {
       final user = await ref.read(authRepositoryProvider).restoreSession();
+      if (version != _authVersion) return;
 
       state = state.copyWith(
         user: user,
@@ -52,6 +61,7 @@ class AuthViewModel extends Notifier<AuthState> {
         clearError: true,
       );
     } catch (_) {
+      if (version != _authVersion) return;
       state = state.copyWith(
         clearUser: true,
         initializing: false,
@@ -64,6 +74,7 @@ class AuthViewModel extends Notifier<AuthState> {
       return false;
     }
 
+    ++_authVersion;
     state = state.copyWith(
       loading: true,
       clearError: true,
@@ -97,6 +108,9 @@ class AuthViewModel extends Notifier<AuthState> {
   }
 
   Future<bool> completeWebKakaoLogin(String code) async {
+    if (state.loading) return false;
+
+    ++_authVersion;
     state = state.copyWith(
       loading: true,
       clearError: true,
@@ -133,6 +147,7 @@ class AuthViewModel extends Notifier<AuthState> {
       return;
     }
 
+    ++_authVersion;
     state = state.copyWith(
       loading: true,
       clearError: true,

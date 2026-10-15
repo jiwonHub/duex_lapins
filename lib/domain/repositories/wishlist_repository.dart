@@ -1,4 +1,4 @@
 abstract class WishlistRepository {
-  Set<String> getIds();
-  Set<String> toggle(String productId);
+  Future<Set<String>> getIds();
+  Future<Set<String>> setSaved(String productId, bool saved);
 }

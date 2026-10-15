@@ -1,4 +1,4 @@
-import 'package:duex_lapins/domain/models/product.dart';
+import 'package:deux_lapins/domain/models/product.dart';
 
 class CartItem {
   const CartItem({
@@ -6,9 +6,11 @@ class CartItem {
     required this.size,
     required this.color,
     required this.quantity,
+    required this.productVariantId,
   });
 
   final Product product;
+  final String productVariantId;
   final String size;
   final String color;
   final int quantity;
@@ -20,6 +22,7 @@ class CartItem {
       product: product,
       size: size,
       color: color,
+      productVariantId: productVariantId,
       quantity: quantity ?? this.quantity,
     );
   }

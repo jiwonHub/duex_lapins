@@ -1,4 +1,6 @@
-import 'package:duex_lapins/core/theme/app_theme.dart';
+import 'dart:convert';
+
+import 'package:deux_lapins/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 class AppImage extends StatelessWidget {
@@ -15,8 +17,18 @@ class AppImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final image = Image.network(
-      url,
+    final ImageProvider imageProvider;
+
+    if (url.startsWith('data:image/') && url.contains(';base64,')) {
+      imageProvider = MemoryImage(
+        base64Decode(url.substring(url.indexOf(',') + 1)),
+      );
+    } else {
+      imageProvider = NetworkImage(url);
+    }
+
+    final image = Image(
+      image: imageProvider,
       fit: fit,
       width: double.infinity,
       height: double.infinity,

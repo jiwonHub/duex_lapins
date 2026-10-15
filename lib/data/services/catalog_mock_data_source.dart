@@ -1,11 +1,119 @@
-import 'package:duex_lapins/data/models/product_model.dart';
+import 'dart:convert';
+
+import 'package:deux_lapins/core/network/shared_mock_api_client.dart';
+import 'package:deux_lapins/data/models/product_model.dart';
 
 abstract class CatalogMockDataSource {
-  Future<List<ProductModel>> getProducts();
+  Future<Map<String, dynamic>> request(String method, String path);
+  Future<void> deductStock(Map<String, int> quantities);
 }
 
 class CatalogMockDataSourceImpl implements CatalogMockDataSource {
+  // 한 DataSource 인스턴스에서 목록/상세가 같은 JSON 원본을 조회한다.
+  late final Future<List<Map<String, dynamic>>> _records = _seed();
+
+  Future<List<Map<String, dynamic>>> _seed() async {
+    final products = await getProducts();
+    return products.map((product) {
+      final row = product.toJson();
+      row['variants'] = [
+        for (final color in product.colors)
+          for (final size in product.sizes)
+            {
+              'id': '${product.id}:${color.trim().toUpperCase()}:${size.trim().toUpperCase()}',
+              'product_id': product.id,
+              'color_name': color,
+              'size_name': size,
+              'stock_quantity': product.id == 'p05' ||
+                  (product.id == 'p01' && color == 'Black' && size == 'XS')
+                  ? 0
+                  : (product.id == 'p03' && color == 'White' && size == 'S'
+                  ? 2
+                  : 8),
+              'low_stock_threshold': 3,
+              'is_active': true,
+            },
+      ];
+      return row;
+    }).toList();
+  }
+
   @override
+  Future<Map<String, dynamic>> request(String method, String path) async {
+    if (SharedMockApiClient.enabled) {
+      return SharedMockApiClient.instance.request(
+        method,
+        '/shop$path',
+      );
+    }
+
+    await Future<void>.delayed(const Duration(milliseconds: 80));
+    final records = await _records;
+    final segments = Uri.parse(path).pathSegments;
+
+    Map<String, dynamic> response;
+    if (method.toUpperCase() != 'GET') {
+      response = {
+        'success': false,
+        'error': {'code': 'METHOD_NOT_ALLOWED', 'message': '지원하지 않는 요청입니다.'},
+      };
+    } else if (path == '/products') {
+      response = {'success': true, 'data': records.where(_isPublic).toList()};
+    } else if (segments.length == 2 && segments.first == 'products') {
+      Map<String, dynamic>? result;
+      for (final record in records) {
+        if (record['id'] == segments[1] && _isPublic(record)) {
+          result = record;
+          break;
+        }
+      }
+      response = result == null
+          ? {
+        'success': false,
+        'error': {'code': 'NOT_FOUND', 'message': '상품을 찾을 수 없습니다.'},
+      }
+          : {'success': true, 'data': result};
+    } else {
+      response = {
+        'success': false,
+        'error': {'code': 'NOT_FOUND', 'message': 'API 경로가 존재하지 않습니다.'},
+      };
+    }
+
+    // HTTP 응답과 같은 직렬화 경계를 통과시킨다.
+    return (jsonDecode(jsonEncode(response)) as Map<String, dynamic>);
+  }
+
+  @override
+  Future<void> deductStock(Map<String, int> quantities) async {
+    final products = await _records;
+    final matched = <String, Map<String, dynamic>>{};
+    for (final product in products) {
+      if (!_isPublic(product) || product['sale_status'] != 'selling') continue;
+      for (final raw in (product['variants'] as List<dynamic>)) {
+        final variant = raw as Map<String, dynamic>;
+        matched[variant['id'] as String] = variant;
+      }
+    }
+    // 먼저 전 옵션을 검증한 뒤 한 번에 차감한다.
+    for (final entry in quantities.entries) {
+      final variant = matched[entry.key];
+      if (entry.value <= 0 || variant == null ||
+          variant['is_active'] != true ||
+          (variant['stock_quantity'] as int) < entry.value) {
+        throw StateError('상품 옵션의 재고가 부족하거나 판매할 수 없습니다: ${entry.key}');
+      }
+    }
+    for (final entry in quantities.entries) {
+      final variant = matched[entry.key]!;
+      variant['stock_quantity'] = (variant['stock_quantity'] as int) - entry.value;
+    }
+  }
+
+  bool _isPublic(Map<String, dynamic> record) =>
+      record['publish_status'] == 'published' &&
+          record['sale_status'] != 'hidden';
+
   Future<List<ProductModel>> getProducts() async {
     await Future<void>.delayed(const Duration(milliseconds: 80));
     return const [
@@ -107,6 +215,7 @@ class CatalogMockDataSourceImpl implements CatalogMockDataSource {
       ProductModel(
         id: 'p08',
         brand: 'DUEX LAPINS',
+        line: 'work',
         name: 'Relaxed Denim',
         category: 'PANTS',
         price: 179000,
@@ -120,6 +229,7 @@ class CatalogMockDataSourceImpl implements CatalogMockDataSource {
       ProductModel(
         id: 'p09',
         brand: 'DUEX LAPINS',
+        line: 'work',
         name: 'Utility Layered Set',
         category: 'SET',
         price: 548000,
